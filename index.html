@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily UI 007 - Settings</title>
+    <style>
+        /* --- Variables de Tema --- */
+        :root {
+            --bg-1: #0f0c29; --bg-2: #302b63; --bg-3: #24243e; --bg-4: #8E2DE2;
+            --glass: rgba(255, 255, 255, 0.08);
+            --glass-border: rgba(255, 255, 255, 0.15);
+            --accent: linear-gradient(45deg, #8E2DE2, #4A00E0);
+            --success: linear-gradient(45deg, #11998e, #38ef7d);
+            --text: #ffffff;
+            --text-muted: #a0a0a0;
+            --slider-bg: rgba(255,255,255,0.15);
+            --tooltip-bg: rgba(0, 0, 0, 0.8);
+            --tooltip-text: #fff;
+        }
+
+        body.light-theme {
+            --bg-1: #FFDEE9; --bg-2: #B5FFFC; --bg-3: #f5f7fa; --bg-4: #c3cfe2;
+            --glass: rgba(255, 255, 255, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.8);
+            --accent: linear-gradient(45deg, #00C9FF, #92FE9D);
+            --success: linear-gradient(45deg, #11998e, #38ef7d);
+            --text: #1a1a1a;
+            --text-muted: #555555;
+            --slider-bg: rgba(0,0,0,0.1);
+            --tooltip-bg: rgba(255, 255, 255, 0.9);
+            --tooltip-text: #1a1a1a;
+        }
+
+        * {
+            margin: 0; padding: 0; box-sizing: border-box;
+            font-family: 'Inter', system-ui, sans-serif;
+            transition: color 0.3s, background-color 0.3s, border-color 0.3s;
+        }
+
+        /* Bloqueo absoluto de scroll */
+        body {
+            height: 100vh; width: 100vw;
+            display: flex; justify-content: center; align-items: center;
+            color: var(--text); overflow: hidden; position: relative;
+        }
+
+        .challenge-title {
+            position: absolute; top: 30px; left: 30px;
+            font-size: 0.85rem; font-weight: 600; letter-spacing: 2px;
+            text-transform: uppercase; color: var(--text-muted); z-index: 10;
+        }
+
+        #animated-bg {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1;
+            background: linear-gradient(-45deg, var(--bg-1), var(--bg-2), var(--bg-3), var(--bg-4));
+            background-size: 400% 400%; animation: gradientMove 12s ease infinite; transition: filter 0.5s ease;
+        }
+
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* --- Panel Base --- */
+        .settings-panel {
+            width: 90%; max-width: 440px; background: var(--glass);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border); border-radius: 24px;
+            padding: 30px; box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+            /* Evitamos márgenes para mantener el centrado perfecto del flexbox */
+            margin: 0;
+        }
+
+        h2 { margin-bottom: 20px; font-weight: 400; }
+
+        .profile-section {
+            background: var(--glass); border-radius: 16px; padding: 18px; margin-bottom: 20px;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer; border: 1px solid transparent; position: relative;
+        }
+        .profile-section:hover {
+            transform: translateY(-6px); border-color: var(--glass-border);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        .profile-header { display: flex; align-items: center; gap: 15px; }
+        .avatar {
+            width: 50px; height: 50px; border-radius: 50%; background: var(--accent);
+            display: flex; justify-content: center; align-items: center; flex-shrink: 0;
+            font-weight: bold; font-size: 1.2rem; color: white; border: 2px solid var(--glass-border);
+        }
+
+        .career-reveal { max-height: 0; opacity: 0; overflow: hidden; transition: all 0.4s ease; }
+        .profile-section:hover .career-reveal {
+            max-height: 100px; opacity: 1; margin-top: 12px; padding-top: 12px;
+            border-top: 1px solid var(--glass-border);
+        }
+        .career-reveal p { font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; }
+
+        /* Tooltips UX */
+        .ux-badge {
+            display: inline-flex; align-items: center; justify-content: center;
+            background: var(--accent); color: white; font-size: 0.55rem; font-weight: bold;
+            padding: 2px 6px; border-radius: 8px; margin-left: 6px; cursor: help; position: relative;
+        }
+        .ux-badge::after {
+            content: attr(data-tooltip); position: absolute; bottom: 150%; left: 50%;
+            transform: translateX(-50%); background: var(--tooltip-bg); color: var(--tooltip-text);
+            padding: 8px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: normal;
+            white-space: nowrap; opacity: 0; pointer-events: none; transition: 0.2s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 100;
+        }
+        .ux-badge:hover::after { opacity: 1; bottom: 120%; }
+
+        .setting-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; margin-bottom: 8px; gap: 10px; }
+        .label-group { display: flex; flex-direction: column; gap: 3px; }
+        .label-group span { font-weight: 500; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; font-size: 0.95rem; }
+        .label-group small { font-size: 0.75rem; color: var(--text-muted); }
+
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--slider-bg); transition: .4s; border-radius: 34px; border: 1px solid var(--glass-border);
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px;
+            background: white; transition: .4s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        input:checked + .slider { background: var(--accent); border-color: transparent; }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; cursor: pointer; }
+        input[type=range]::-webkit-slider-runnable-track { height: 6px; background: var(--slider-bg); border-radius: 4px; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 16px; width: 16px; background: #ffffff;
+            border-radius: 50%; margin-top: -5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); transition: transform 0.1s;
+        }
+        input[type=range]::-webkit-slider-thumb:active { transform: scale(1.2); }
+
+        .settings-footer {
+            margin-top: 20px; display: flex; gap: 10px; padding-top: 15px; border-top: 1px solid var(--glass-border);
+        }
+        button {
+            flex: 1; padding: 12px; border-radius: 12px; border: none;
+            cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: all 0.3s ease;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .btn-save { background: var(--accent); color: white; }
+        .btn-save:hover { transform: translateY(-2px); filter: brightness(1.1); }
+        .btn-cancel { background: transparent; color: var(--text); border: 1px solid var(--glass-border); }
+        .btn-cancel:hover { background: var(--glass); transform: translateY(-2px); }
+        .btn-save.success { background: var(--success); }
+
+        /* --- MEDIA QUERIES PARA RESPONSIVE WIDTH --- */
+        @media (max-width: 500px) {
+            .challenge-title { top: 15px; left: 15px; font-size: 0.7rem; }
+            .settings-panel { padding: 20px; border-radius: 20px; }
+            .profile-header { flex-direction: column; text-align: center; }
+            .ux-badge::after { width: 220px; white-space: normal; text-align: center; }
+            .settings-footer { flex-direction: column-reverse; }
+            button { width: 100%; padding: 12px; }
+        }
+
+        /* --- MEDIA QUERIES PARA RESPONSIVE HEIGHT (Evitar Scroll) --- */
+        @media (max-height: 750px) {
+            .challenge-title { display: none; } /* Ocultamos el título si estorba arriba */
+            .settings-panel { padding: 18px 24px; }
+            h2 { margin-bottom: 12px; font-size: 1.2rem; }
+            .profile-section { padding: 12px; margin-bottom: 12px; }
+            .avatar { width: 40px; height: 40px; font-size: 1rem; }
+            .setting-row { padding: 6px 0; margin-bottom: 5px; }
+            .settings-footer { margin-top: 12px; padding-top: 12px; }
+            button { padding: 10px; }
+            .profile-section:hover .career-reveal { max-height: 80px; margin-top: 10px; padding-top: 10px; }
+            .ux-badge::after { font-size: 0.65rem; padding: 6px 8px; }
+        }
+    </style>
+</head>
+<body>
+
+    <audio id="bg-music" loop>
+        <source src="https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3" type="audio/mpeg">
+    </audio>
+
+    <div class="challenge-title">Daily UI 007 - Settings</div>
+    <div id="animated-bg"></div>
+
+    <div class="settings-panel">
+        <h2 id="title">Daily UI - 007</h2>
+
+        <div class="profile-section">
+            <div class="profile-header">
+                <div class="avatar">JB</div>
+                <div class="info">
+                    <strong>Julián Bastías <span class="ux-badge" data-tooltip="Heurística #8: Diseño minimalista y revelación progresiva.">UX</span></strong>
+                    <div id="acc-type" style="font-size: 0.8rem; color: var(--text-muted);">Cuenta Experimental</div>
+                </div>
+            </div>
+            <div class="career-reveal">
+                <p><strong id="career-label">Perfil:</strong> UX/UI Designer & Frontend Developer</p>
+                <p style="font-size: 0.75rem; margin-top: 4px;">Mendoza, Argentina</p>
+            </div>
+        </div>
+
+        <div class="setting-row">
+            <div class="label-group">
+                <span>Modo Claro <span class="ux-badge" data-tooltip="Accesibilidad: Permite al usuario adaptar el contraste.">UX</span></span>
+                <small>Cambia la paleta de colores</small>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="theme-toggle">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="setting-row">
+            <div class="label-group">
+                <span id="lang-title">Idioma (ES / EN) <span class="ux-badge" data-tooltip="Heurística #2: Coincidencia entre el sistema y el mundo real.">UX</span></span>
+                <small id="lang-desc">Cambiar idioma de la interfaz</small>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="lang-toggle">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="setting-row">
+            <div class="label-group">
+                <span id="music-title">Música Ambiental <span class="ux-badge" data-tooltip="Heurística #3: Control del usuario (Evitar autoplay).">UX</span></span>
+                <small id="music-desc">Reproducir pistas Lo-Fi</small>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="music-toggle">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="setting-row" style="flex-direction: column; align-items: flex-start; gap: 10px;">
+            <div class="label-group" style="width: 100%; flex-direction: row; justify-content: space-between;">
+                <span id="vol-title">Volumen <span class="ux-badge" data-tooltip="Heurística #1: Visibilidad del estado del sistema.">UX</span></span>
+            </div>
+            <input type="range" id="volume-slider" min="0" max="100" value="50">
+        </div>
+
+        <div class="settings-footer">
+            <button class="btn-cancel" id="btn-cancel" style="position: relative;">Cancelar <span class="ux-badge" style="position: absolute; top: -10px; right: -10px;" data-tooltip="Heurística #3: Deshacer acciones fácilmente.">UX</span></button>
+            <button class="btn-save" id="btn-save" style="position: relative;">Aplicar Cambios <span class="ux-badge" style="position: absolute; top: -10px; right: -10px;" data-tooltip="Feedback: Confirmación visual de éxito.">UX</span></button>
+        </div>
+    </div>
+
+    <script>
+        const themeToggle = document.getElementById('theme-toggle');
+        const langToggle = document.getElementById('lang-toggle');
+        const musicToggle = document.getElementById('music-toggle');
+        const volumeSlider = document.getElementById('volume-slider');
+        const audio = document.getElementById('bg-music');
+        const btnSave = document.getElementById('btn-save');
+        const btnCancel = document.getElementById('btn-cancel');
+
+        let savedState = {
+            themeLight: false,
+            langEn: false,
+            musicPlay: false,
+            volume: 50
+        };
+
+        themeToggle.addEventListener('change', () => {
+            themeToggle.checked ? document.body.classList.add('light-theme') : document.body.classList.remove('light-theme');
+        });
+
+        audio.volume = 0.5;
+        musicToggle.addEventListener('change', () => {
+            musicToggle.checked ? audio.play() : audio.pause();
+        });
+
+        volumeSlider.addEventListener('input', (e) => {
+            audio.volume = e.target.value / 100;
+        });
+
+        const translations = {
+            es: { title: "Ajustes del Sistema", accType: "Cuenta Experimental", careerLabel: "Perfil:", langTitle: 'Idioma (ES / EN) <span class="ux-badge" data-tooltip="Heurística #2: Coincidencia entre el sistema y el mundo real.">UX</span>', langDesc: "Cambiar idioma de la interfaz", musicTitle: 'Música Ambiental <span class="ux-badge" data-tooltip="Heurística #3: Control del usuario (Evitar autoplay).">UX</span>', musicDesc: "Reproducir pistas Lo-Fi", volTitle: 'Volumen <span class="ux-badge" data-tooltip="Heurística #1: Visibilidad del estado del sistema.">UX</span>', btnCancel: 'Cancelar <span class="ux-badge" style="position: absolute; top: -10px; right: -10px;" data-tooltip="Heurística #3: Deshacer acciones fácilmente.">UX</span>', btnSave: 'Aplicar Cambios <span class="ux-badge" style="position: absolute; top: -10px; right: -10px;" data-tooltip="Feedback: Confirmación visual de éxito.">UX</span>', saveSuccess: "¡Guardado!" },
+            en: { title: "System Settings", accType: "Experimental Build", careerLabel: "Career:", langTitle: 'Language (ES / EN) <span class="ux-badge" data-tooltip="Heuristic #2: Match between system and the real world.">UX</span>', langDesc: "Change interface language", musicTitle: 'Ambient Music <span class="ux-badge" data-tooltip="Heuristic #3: User control and freedom.">UX</span>', musicDesc: "Play Lo-Fi tracks", volTitle: 'Volume <span class="ux-badge" data-tooltip="Heuristic #1: Visibility of system status.">UX</span>', btnCancel: 'Cancel <span class="ux-badge" style="position: absolute; top: -10px; right: -10px;" data-tooltip="Heuristic #3: Easy undo actions.">UX</span>', btnSave: 'Deploy Changes <span class="ux-badge" style="position: absolute; top: -10px; right: -10px;" data-tooltip="Feedback: Visual success confirmation.">UX</span>', saveSuccess: "Saved!" }
+        };
+
+        function updateLanguage() {
+            const lang = langToggle.checked ? 'en' : 'es';
+            document.getElementById('title').innerText = translations[lang].title;
+            document.getElementById('acc-type').innerText = translations[lang].accType;
+            document.getElementById('career-label').innerText = translations[lang].careerLabel;
+            document.getElementById('lang-title').innerHTML = translations[lang].langTitle;
+            document.getElementById('lang-desc').innerText = translations[lang].langDesc;
+            document.getElementById('music-title').innerHTML = translations[lang].musicTitle;
+            document.getElementById('music-desc').innerText = translations[lang].musicDesc;
+            document.getElementById('vol-title').innerHTML = translations[lang].volTitle;
+            btnCancel.innerHTML = translations[lang].btnCancel;
+            
+            if (!btnSave.classList.contains('success')) {
+                btnSave.innerHTML = translations[lang].btnSave;
+            }
+        }
+
+        langToggle.addEventListener('change', updateLanguage);
+
+        btnSave.addEventListener('click', () => {
+            savedState = {
+                themeLight: themeToggle.checked,
+                langEn: langToggle.checked,
+                musicPlay: musicToggle.checked,
+                volume: volumeSlider.value
+            };
+
+            const lang = langToggle.checked ? 'en' : 'es';
+            btnSave.innerHTML = translations[lang].saveSuccess;
+            btnSave.classList.add('success');
+
+            setTimeout(() => {
+                btnSave.classList.remove('success');
+                btnSave.innerHTML = translations[lang].btnSave;
+            }, 2000);
+        });
+
+        btnCancel.addEventListener('click', () => {
+            themeToggle.checked = savedState.themeLight;
+            langToggle.checked = savedState.langEn;
+            musicToggle.checked = savedState.musicPlay;
+            volumeSlider.value = savedState.volume;
+
+            savedState.themeLight ? document.body.classList.add('light-theme') : document.body.classList.remove('light-theme');
+            
+            updateLanguage();
+            
+            if (savedState.musicPlay) {
+                let playPromise = audio.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(error => { console.log("Auto-play prevented on cancel."); });
+                }
+            } else {
+                audio.pause();
+            }
+            
+            audio.volume = savedState.volume / 100;
+
+            const panel = document.querySelector('.settings-panel');
+            panel.style.transform = 'scale(0.98)';
+            setTimeout(() => { panel.style.transform = 'scale(1)'; }, 150);
+        });
+    </script>
+</body>
+</html>
